@@ -111,4 +111,4 @@ Using the deep + wide network with image size of 512, this takes 0.65 seconds pe
 # Issues
 - Boundry artifacts need to be corrected. This may be due to different tv loss or some other factor.
 - keras-rtst trains well using a small number of samples. However this model requires at least 40k iterations to acheive a good result.
-
+- Very string application of style. Content is almost completely destroyed.
