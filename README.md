@@ -18,7 +18,7 @@ Blue Moon Lake - Starry Night by Vincent Van Gogh<br>
 - The base network does not have the original 3-32-64-128 --- 64-32-3 architecture. Due to certain errors, the model is forced to be
 in 3-32-64-64 --- 64-64-3. To compensate, we can use a "wide" mode, which replaces 64 filters with 128.
 - The weights of the style loss and content loss are not given in the paper. In this implementation, Content weight has been given 100x 
-the weight of style weight (since the style quickky over powers the content).
+the weight of style weight (since the style quickly overpowers the content).
 - A "deep" network can be created, which is useful for larger image_size (say 512)
 - Super resolution is not implemented, yet.
 - Batch size is 1 instead of 4
@@ -46,7 +46,7 @@ python train.py "path/to/style/image" "path/to/dataset/" "path/to/validation/ima
 ```
 
 A few details to be noted when training:
-- At every val_checkpoint (default every 400 samples of MS COCO), the checkpoint weights and validation images will be saved in two folders: val_images and val_weights. 
+- At every val_checkpoint (default: every 400 samples of MS COCO), the checkpoint weights and validation images will be saved in two folders: val_images and val_weights. 
 - At the end of training, another folder with the name "weights" will be created which stores the final weights of the model.
 - You can exit at any time using a Keyboard interrupt. This will save the model weights in the "weights" directory.
 - You can manually stop the script and rename the validation weights to "fastnet_" + style_name and save them in the weights directory. 
