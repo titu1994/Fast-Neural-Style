@@ -45,6 +45,12 @@ python train.py "path/to/style/image" "path/to/dataset/" "path/to/validation/ima
 --image_size 512 --model_depth "deep" --model_width "wide" --val_checkpoint 500 --epochs 2
 ```
 
+A few details to be noted when training:
+- At every val_checkpoint (default every 400 samples of MS COCO), the checkpoint weights and validation images will be saved in two folders: val_images and val_weights. 
+- At the end of training, another folder with the name "weights" will be created which stores the final weights of the model.
+- You can exit at any time using a Keyboard interrupt. This will save the model weights in the "weights" directory.
+- You can manually stop the script and rename the validation weights to "fastnet_" + style_name and save them in the weights directory. 
+
 ## Prediction
 Due to limitations of having to provide output shape for Deconvolution2D layers, it is not possible to transform multiple images using
 a single network (unless each image has the same size).
