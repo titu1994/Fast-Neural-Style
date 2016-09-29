@@ -59,6 +59,7 @@ t1 = time.time()
 output = FastNet.fastnet_predict(img)
 t2 = time.time()
 
+print("Saved image : %s" % output_image)
 print("Prediction time : %0.2f seconds" % (t2 - t1))
 
 img = output[0, :, :, :]
