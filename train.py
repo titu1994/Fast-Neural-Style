@@ -23,9 +23,9 @@ parser.add_argument('style_reference_image_path', metavar='ref', type=str,
 parser.add_argument("data_path", type=str, help="Path to training images")
 parser.add_argument("validation_img", type=str, default=None, help='Path to validation image')
 
-parser.add_argument("--content_weight", type=float, default=1e3, help='Content weight')
+parser.add_argument("--content_weight", type=float, default=10., help='Content weight')
 parser.add_argument("--style_weight", type=float, default=1., help='Style weight')
-parser.add_argument("--tv_weight", type=float, default=1e-3, help='Total Variation Weight')
+parser.add_argument("--tv_weight", type=float, default=8.5e-5, help='Total Variation Weight')
 
 parser.add_argument("--image_size", dest="img_size", default=256, type=int, help='Output Image size')
 parser.add_argument("--epochs", default=1, type=int, help='Number of epochs')
