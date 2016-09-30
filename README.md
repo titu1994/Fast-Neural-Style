@@ -98,8 +98,8 @@ python transform.py "style name" "path/to/content/image" --tv_weight 1e-5 --mode
 ```
 
 # Requirements
-- Theano
-- Keras
+- Theano - Latest from master (0.0.rc2)
+- Keras - Latest from master 
 - CUDA (GPU) -- Recommended
 - CuDNN (GPU) -- Recommended
 - Scipy
