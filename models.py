@@ -265,7 +265,7 @@ class FastStyleNet:
 
         model = Model(ip, d1)
 
-        if self.model_save_path is not None:
+        if self.model_save_path is not None and self.model is None:
             model.save(self.model_save_path, overwrite=True)
 
         self.fastnet_outputs_dict = dict([(layer.name, layer.output) for layer in model.layers])
