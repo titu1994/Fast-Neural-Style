@@ -4,8 +4,9 @@ import h5py
 
 from keras import backend as K
 from keras.models import Model
-from keras.layers import Input, merge, BatchNormalization, Activation, Lambda
-from keras.layers.convolutional import Convolution2D, AveragePooling2D, MaxPooling2D, UpSampling2D, Deconvolution2D
+from keras.layers import Input, merge, BatchNormalization, Activation
+from keras.layers.convolutional import Convolution2D, AveragePooling2D, MaxPooling2D, Deconvolution2D
+from layers import VGGNormalize, Denormalize
 from keras.utils.data_utils import get_file
 
 # VGG-16 Weights Path
@@ -39,7 +40,7 @@ class VGG:
         self.img_height = img_height
         self.img_width = img_width
 
-    def create_model(self, model_input, x_in, pool_type=0):
+    def append_vgg_model(self, model_input, x_in, pool_type=0):
         '''
         Adds the VGG model to the FastNet model. It concatenates the original input to the output generated
         by the FastNet model. This is used to compute output features of VGG for the input image.
@@ -60,15 +61,15 @@ class VGG:
         '''
 
         if K.image_dim_ordering() == "th":
-            true_X_input = Input(shape=(3, self.img_height, self.img_width))
+            true_X_input = Input(shape=(3, self.img_width, self.img_height))
         else:
-            true_X_input = Input(shape=(self.img_height, self.img_width, 3))
+            true_X_input = Input(shape=(self.img_width, self.img_height, 3))
 
         # Append the initial input to the FastNet input to the VGG inputs
         x = merge([x_in, true_X_input], mode='concat', concat_axis=0)
 
-        # Normalize the inputs
-        x = Lambda(lambda x: (x - 120))(x)
+        # Normalize the inputs via custom VGG Normalization layer
+        x = VGGNormalize(name="vgg_normalize")(x)
 
         # Begin adding the VGG layers
         x = Convolution2D(64, 3, 3, activation='relu', name='conv1_1')(x)
@@ -129,7 +130,8 @@ class FastStyleNet:
     '''
 
     def __init__(self, img_width=256, img_height=256, kernel_size=3, pool_type=0,
-                 style_weight=1., content_weight=100., tv_weight=8.5e-5, model_width="thin", model_depth="shallow"):
+                 style_weight=1., content_weight=1e3, tv_weight=1e-3, model_width="thin",
+                 model_depth="shallow", save_fastnet_model=None):
         '''
         Creates a FastStyleNet object which can be used to train, validate or predict networks
 
@@ -178,7 +180,9 @@ class FastStyleNet:
         self.vgg_style_func = None
         self.vgg_content_func = None
         self.fastnet_predict_func = None
+
         self.model = None  # Preserves the main training instance
+        self.model_save_path = save_fastnet_model
 
     def create_model(self, style_name=None, train_mode=False, style_image_path=None, validation_path=None):
         '''
@@ -228,7 +232,7 @@ class FastStyleNet:
             c4 = Convolution2D(self.features, self.k, self.k, activation='relu', border_mode='same', subsample=(2, 2),
                                name='conv4')(x)
 
-            x = BatchNormalization(axis=1, mode=self.mode, name="batchnorm4")(c4)
+            x = BatchNormalization(axis=1, mode=self.mode, name="batchnorm_4")(c4)
 
         r1 = self._residual_block(x, 1)
         r2 = self._residual_block(r1, 2)
@@ -255,9 +259,14 @@ class FastStyleNet:
         d2 = BatchNormalization(axis=1, mode=self.mode, name="batchnorm5")(d2)
 
         d1 = Convolution2D(3, 9, 9, activation='tanh', border_mode='same', name='deconv1')(d2)
-        d1 = Lambda(lambda x: (x + 1) * 127.5, name='fastnet_output')(d1)  # Scale output to range [0, 255]
+
+        # Scale output to range [0, 255] via custom Denormalize layer
+        d1 = Denormalize(name='fastnet_output')(d1)
 
         model = Model(ip, d1)
+
+        if self.model_save_path is not None:
+            model.save(self.model_save_path, overwrite=True)
 
         self.fastnet_outputs_dict = dict([(layer.name, layer.output) for layer in model.layers])
         fastnet_output_layer = model.layers[-1]
@@ -267,7 +276,7 @@ class FastStyleNet:
                 if validation_path is not None:
                     path = validation_path
                 else:
-                    path = "weights/" + "fastnet_%s.h5" % style_name
+                    path = "weights/fastnet_%s.h5" % style_name
 
                 model.load_weights(path)
                 print('Fast Style Net weights loaded.')
@@ -276,8 +285,8 @@ class FastStyleNet:
 
         # Add VGG layers to Fast Style Model
         if train_mode:
-            model = VGG(self.img_height, self.img_width).create_model(model.input, x_in=model.output,
-                                                                      pool_type=self.pool_type)
+            model = VGG(self.img_height, self.img_width).append_vgg_model(model.input, x_in=model.output,
+                                                                          pool_type=self.pool_type)
 
             if self.model is None:
                 self.model = model
@@ -436,15 +445,16 @@ class FastStyleNet:
 
         f.close()
         os.remove(full_weights_fn)  # The full weights aren't needed anymore since we only need 1 forward pass
-        # through the fastnet now.
+                                    # through the fastnet now.
         print("Saved fastnet weights for style : %s.h5" % style_name)
 
 
 if __name__ == "__main__":
     from keras.utils.visualize_util import plot
 
-    net = FastStyleNet()
+    net = FastStyleNet(model_depth="shallow")
     model = net.create_model(style_image_path=r"D:\Yue\Google Drive\Wallpapers\blue-moon-lake-52859.jpg",
                              train_mode=True)
-    model.summary()
+    #model.summary()
+    print(len(model.layers))
     plot(model, 'fastnet.png', show_shapes=True, show_layer_names=True)

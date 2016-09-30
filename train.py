@@ -1,5 +1,6 @@
 from __future__ import print_function
 from __future__ import division
+
 import os
 from loss import dummy_loss
 import models
@@ -12,6 +13,8 @@ from keras.optimizers import Adadelta
 from keras.preprocessing.image import ImageDataGenerator
 from keras import backend as K
 
+# Only supports Theano for now
+K.set_image_dim_ordering("th")
 
 parser = argparse.ArgumentParser(description='Fast Neural style transfer with Keras.')
 parser.add_argument('style_reference_image_path', metavar='ref', type=str,
@@ -20,9 +23,9 @@ parser.add_argument('style_reference_image_path', metavar='ref', type=str,
 parser.add_argument("data_path", type=str, help="Path to training images")
 parser.add_argument("validation_img", type=str, default=None, help='Path to validation image')
 
-parser.add_argument("--content_weight", type=float, default=100., help='Content weight')
+parser.add_argument("--content_weight", type=float, default=1e3, help='Content weight')
 parser.add_argument("--style_weight", type=float, default=1., help='Style weight')
-parser.add_argument("--tv_weight", type=float, default=8.5e-5, help='Total Variation Weight')
+parser.add_argument("--tv_weight", type=float, default=1e-3, help='Total Variation Weight')
 
 parser.add_argument("--image_size", dest="img_size", default=256, type=int, help='Output Image size')
 parser.add_argument("--epochs", default=1, type=int, help='Number of epochs')
@@ -66,15 +69,20 @@ pool_type = 1 if pool_type == "ave" else 0
 iteration = 0
 
 model_depth = str(args.model_depth).lower()
-assert model_depth in ["shallow", "wide"], 'model_depth must be one of "shallow" or "wide"'
+assert model_depth in ["shallow", "deep"], 'model_depth must be one of "shallow" or "deep"'
 
 model_width = str(args.model_width).lower()
 assert model_width in ["thin", "wide"], 'model_width must be one of "thin" or "wide"'
 
 ''' Model '''
+
+if not os.path.exists("models/"):
+    os.makedirs("models/")
+
 FastNet = models.FastStyleNet(img_width=img_width, img_height=img_height, kernel_size=kernel_size, pool_type=pool_type,
                               style_weight=style_weight, content_weight=content_weight, tv_weight=tv_weight,
-                              model_width=model_width, model_depth=model_depth)
+                              model_width=model_width, model_depth=model_depth,
+                              save_fastnet_model="models/%s.h5" % style_name)
 
 model = FastNet.create_model(style_name=None, train_mode=True, style_image_path=style_reference_image_path)
 
@@ -121,7 +129,7 @@ for i in range(nb_epoch):
                 x = img_utils.preprocess_image(validation_img_path, resize=False)
                 x /= 255.
 
-                height, width = x.shape[2], x.shape[3]
+                width, height = x.shape[2], x.shape[3]
 
                 iter_path = style_name + "_epoch_%d_at_iteration_%d" % (i + 1, iteration)
                 FastNet.save_fastnet_weights(iter_path, directory="val_weights/")

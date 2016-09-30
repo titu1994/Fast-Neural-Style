@@ -22,6 +22,7 @@ the weight of style weight (since the style quickly overpowers the content).
 - A "deep" network can be created, which is useful for larger image_size (say 512)
 - Super resolution is not implemented, yet.
 - Batch size is 1 instead of 4
+- Adadelta used instead of Adam optimizer. This is because Adam causes loss to explode over 60k epochs, and quality of output drops.
 
 ## Differences from chainer-fast-neuralstyle
 - Model is slightly different than the one used by the chainer implementation.
@@ -48,6 +49,7 @@ python train.py "path/to/style/image" "path/to/dataset/" "path/to/validation/ima
 A few details to be noted when training:
 - At every val_checkpoint (default: every 400 samples of MS COCO), the checkpoint weights and validation images will be saved in two folders: val_images and val_weights. 
 - At the end of training, another folder with the name "weights" will be created which stores the final weights of the model.
+- At the end of training, another folder with the name "models" will be created which stores the model architecture for each style trained.
 - You can exit at any time using a Keyboard interrupt. This will save the model weights in the "weights" directory.
 - You can manually stop the script and rename the validation weights to "fastnet_" + style_name and save them in the weights directory. 
 
@@ -62,9 +64,9 @@ This is because the Deconvolution2D layers need very precise output shape, else 
 python transform.py "style name" "path/to/content/image"
 ```
 
-There are a few parameters which you must use if it is a deep or wide model.
+There is a total variation weight parameter
 ```
-python transform.py "style name" "path/to/content/image" --tv_weight 1e-5 --model_depth "deep" --model_width "wide"
+python transform.py "style name" "path/to/content/image" --tv_weight 1e-5 
 ```
 
 # Parameters
@@ -89,12 +91,6 @@ python transform.py "style name" "path/to/content/image" --tv_weight 1e-5 --mode
 ## Prediction (transform.py)
 ```
 --tv_weight: Weight for Total Variation Regularization. Default = 8.5E-5
-
---model_depth: Can be one of "shallow" or "deep". Adds more convolution and deconvolution layer for "deep" network. Default = "shallow"
---model_width: Can be one of "thin" or "wide". Changes number of intermediate number of filters. Default = "thin"
-
---pool_type: Can be one of "max" or "ave". Pooling type to be used. Default = "max"
---kernel_size: Kernel size for convolution and deconvolution layers. Do not change. For testing purposes only.
 ```
 
 # Requirements
