@@ -1,5 +1,6 @@
 from loss import dummy_loss
 import img_utils
+import layers
 import time
 import os
 import argparse
@@ -30,7 +31,9 @@ weights_path = "weights/fastnet_%s.h5" % style_name
 
 with open(model_path, "r") as f:
     string = f.read()
-    model = load_model(model_path)
+    model = load_model(
+        model_path,
+        dict(Denormalize=layers.Denormalize, VGGNormalize=layers.VGGNormalize))
     model.compile("adadelta", dummy_loss)
 
     model.load_weights(weights_path)
