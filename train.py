@@ -130,13 +130,11 @@ for i in range(nb_epoch):
                 print("Producing validation image...")
 
                 # This ensures that image height and width is an even number
-                x = img_utils.preprocess_image(validation_img_path, resize=True, size_multiple=size_multiple,
-                                               img_width=-1, img_height=-1,load_dims=True )
+                x = img_utils.preprocess_image(validation_img_path, resize=False)
+                x /= 255.
 
                 width, height = x.shape[2], x.shape[3]
-                print(width, height)
 
-                x /= 255.
 
                 iter_path = style_name + "_epoch_%d_at_iteration_%d" % (i + 1, iteration)
                 FastNet.save_fastnet_weights(iter_path, directory="val_weights/")

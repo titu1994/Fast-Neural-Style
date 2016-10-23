@@ -1,4 +1,4 @@
-from keras.engine.topology import Layer, InputSpec
+from keras.engine.topology import Layer
 
 from keras import backend as K
 
@@ -45,8 +45,16 @@ class VGGNormalize(Layer):
         Since individual channels cannot be altered in a TensorVariable, therefore
         we subtract it by 120, similar to the chainer implementation.
         '''
-
-        return x - 120
+        if K.backend() == "theano":
+            import theano.tensor as T
+            T.set_subtensor(x[:, 0, :, :], x[:, 0, :, :] - 103.939, inplace=True)
+            T.set_subtensor(x[:, 1, :, :], x[:, 1, :, :] - 116.779, inplace=True)
+            T.set_subtensor(x[:, 2, :, :], x[:, 2, :, :] - 123.680, inplace=True)
+        else:
+            # No exact substitute for set_subtensor in tensorflow
+            # So we subtract an approximate value
+            x = x - 120
+        return x
 
     def get_output_shape_for(self, input_shape):
         return input_shape
