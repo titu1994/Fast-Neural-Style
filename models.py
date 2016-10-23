@@ -5,9 +5,10 @@ import h5py
 from keras import backend as K
 from keras.models import Model
 from keras.layers import Input, merge, BatchNormalization, Activation
-from keras.layers.convolutional import Convolution2D, AveragePooling2D, MaxPooling2D, Deconvolution2D
-from layers import VGGNormalize, Denormalize
+from keras.layers.convolutional import Convolution2D, AveragePooling2D, MaxPooling2D, Deconvolution2D, Cropping2D
 from keras.utils.data_utils import get_file
+
+from layers import VGGNormalize, Denormalize, ReflectionPadding2D
 
 # VGG-16 Weights Path
 THEANO_WEIGHTS_PATH_NO_TOP = r'https://github.com/fchollet/deep-learning-models/releases/download/v0.1/vgg16_weights_th_dim_ordering_th_kernels_notop.h5'
@@ -217,6 +218,8 @@ class FastStyleNet:
         else:
             ip = Input(shape=(self.img_width, self.img_height, 3), name="X_input")
 
+        #x = ReflectionPadding2D((41, 41))(ip)
+
         c1 = Convolution2D(32, 9, 9, activation='relu', border_mode='same', name='conv1')(ip)
         c1_b = BatchNormalization(axis=1, mode=self.mode, name="batchnorm1")(c1)
 
@@ -258,7 +261,7 @@ class FastStyleNet:
 
         d2 = BatchNormalization(axis=1, mode=self.mode, name="batchnorm5")(d2)
 
-        d1 = Convolution2D(3, 9, 9, activation='tanh', border_mode='same', name='deconv1')(d2)
+        d1 = Convolution2D(3, 9, 9, activation='tanh', border_mode='same', name='valid')(d2)
 
         # Scale output to range [0, 255] via custom Denormalize layer
         d1 = Denormalize(name='fastnet_output')(d1)
@@ -342,12 +345,14 @@ class FastStyleNet:
     def _residual_block(self, ip, id):
         init = ip
 
-        x = Convolution2D(128, self.k, self.k, activation='linear', border_mode='same',
-                          name='res_conv_' + str(id) + '_1')(ip)
+        x = ReflectionPadding2D()(ip)
+        x = Convolution2D(128, self.k, self.k, activation='linear', border_mode='valid',
+                          name='res_conv_' + str(id) + '_1')(x)
         x = BatchNormalization(axis=1, mode=self.mode, name="res_batchnorm_" + str(id) + "_1")(x)
         x = Activation('relu', name="res_activation_" + str(id) + "_1")(x)
 
-        x = Convolution2D(self.features, self.k, self.k, activation='linear', border_mode='same',
+        x = ReflectionPadding2D()(x)
+        x = Convolution2D(self.features, self.k, self.k, activation='linear', border_mode='valid',
                           name='res_conv_' + str(id) + '_2')(x)
         x = BatchNormalization(axis=1, mode=self.mode, name="res_batchnorm_" + str(id) + "_2")(x)
 
@@ -452,9 +457,9 @@ class FastStyleNet:
 if __name__ == "__main__":
     from keras.utils.visualize_util import plot
 
-    net = FastStyleNet(model_depth="shallow")
+    net = FastStyleNet()
     model = net.create_model(style_image_path=r"D:\Yue\Google Drive\Wallpapers\blue-moon-lake-52859.jpg",
-                             train_mode=True)
-    #model.summary()
+                             train_mode=False)
+    model.summary()
     print(len(model.layers))
     plot(model, 'fastnet.png', show_shapes=True, show_layer_names=True)

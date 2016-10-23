@@ -38,7 +38,7 @@ with open(model_path, "r") as f:
 
     model.load_weights(weights_path)
 
-size_multiple = 4 if len(model.layers) == 69 else 8 # 69 layers in shallow model, 73 in deeper model
+size_multiple = 4 if len(model.layers) == 58 else 8 # 58 layers in shallow model, 62 in deeper model
 
 img = img_utils.preprocess_image(content_path, load_dims=True, resize=True, img_width=-1,
                                  img_height=-1, size_multiple=size_multiple)
