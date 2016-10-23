@@ -89,7 +89,6 @@ class ReflectionPadding2D(Layer):
 
         assert dim_ordering in {'tf', 'th'}, 'dim_ordering must be in {tf, th}'
         self.dim_ordering = dim_ordering
-        self.input_spec = [InputSpec(ndim=4)]
 
     def get_output_shape_for(self, input_shape):
         if self.dim_ordering == 'th':
@@ -130,7 +129,7 @@ class ReflectionPadding2D(Layer):
         # Copy the original image to the central part.
 
         # TODO: Make this compatible with Tensorflow
-        out = set_subtensor(out[:, :, w_pad:w_pad + c, h_pad:r + h_pad], x)
+        out = set_subtensor(out[:, :, w_pad:w_pad + r, h_pad:c + h_pad], x)
 
         # Copy borders.
 
@@ -139,7 +138,7 @@ class ReflectionPadding2D(Layer):
         # will run along the original border, and we need to match the
         # statistics of the elements around it.
 
-        out = set_subtensor(out[:, :, w_pad:-w_pad, :h_pad,], x[:, :, :, h_pad:0:-1])
+        out = set_subtensor(out[:, :, w_pad:-w_pad, :h_pad], x[:, :, :, h_pad:0:-1])
         out = set_subtensor(out[:, :, w_pad:-w_pad, -h_pad:], x[:, :, :, -2:-h_pad - 2:-1])
         out = set_subtensor(out[:, :, :w_pad, :], out[:, :, 2 * w_pad:w_pad:-1, :])
         out = set_subtensor(out[:, :, -w_pad:, :], out[:, :, -w_pad - 2:-2 * w_pad - 2:-1, :])

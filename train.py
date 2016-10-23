@@ -9,7 +9,7 @@ import argparse
 import time
 import img_utils
 
-from keras.optimizers import Adadelta
+from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
 from keras import backend as K
 
@@ -74,6 +74,8 @@ assert model_depth in ["shallow", "deep"], 'model_depth must be one of "shallow"
 model_width = str(args.model_width).lower()
 assert model_width in ["thin", "wide"], 'model_width must be one of "thin" or "wide"'
 
+size_multiple = 4 if model_depth == "shallow" else 8
+
 ''' Model '''
 
 if not os.path.exists("models/"):
@@ -86,7 +88,7 @@ FastNet = models.FastStyleNet(img_width=img_width, img_height=img_height, kernel
 
 model = FastNet.create_model(style_name=None, train_mode=True, style_image_path=style_reference_image_path)
 
-optimizer = Adadelta()
+optimizer = Adam()
 model.compile(optimizer, dummy_loss)  # Dummy loss is used since we are learning from regularizes
 print('Finished compiling fastnet model.')
 
@@ -126,10 +128,15 @@ for i in range(nb_epoch):
 
             if iteration % val_checkpoint == 0:
                 print("Producing validation image...")
-                x = img_utils.preprocess_image(validation_img_path, resize=False)
-                x /= 255.
+
+                # This ensures that image height and width is an even number
+                x = img_utils.preprocess_image(validation_img_path, resize=True, size_multiple=size_multiple,
+                                               img_width=-1, img_height=-1,load_dims=True )
 
                 width, height = x.shape[2], x.shape[3]
+                print(width, height)
+
+                x /= 255.
 
                 iter_path = style_name + "_epoch_%d_at_iteration_%d" % (i + 1, iteration)
                 FastNet.save_fastnet_weights(iter_path, directory="val_weights/")

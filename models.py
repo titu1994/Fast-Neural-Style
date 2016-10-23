@@ -32,99 +32,6 @@ def pooling_func(x, pooltype):
         return MaxPooling2D((2, 2), strides=(2, 2))(x)
 
 
-class VGG:
-    '''
-    Helper class to load VGG and its weights to the FastNet model
-    '''
-
-    def __init__(self, img_height=256, img_width=256):
-        self.img_height = img_height
-        self.img_width = img_width
-
-    def append_vgg_model(self, model_input, x_in, pool_type=0):
-        '''
-        Adds the VGG model to the FastNet model. It concatenates the original input to the output generated
-        by the FastNet model. This is used to compute output features of VGG for the input image.
-
-        Then it rescales the FastNet outputs and initial input to range [-127.5, 127.5] with lambda layer
-        Ideally, I would like to subtract the channel means individually, but that is not efficient.
-        Therefore, the closest approximate is to scale the values in the range [-127.5, 127.5]
-
-        After this it adds the VGG layers.
-
-        Args:
-            model_input: Input to the FastNet model
-            x_in: Output of last layer of FastNet model
-            pool_type: int, 1 = AveragePooling, otherwise uses MaxPooling
-
-        Returns: Model (FastNet + VGG)
-
-        '''
-
-        if K.image_dim_ordering() == "th":
-            true_X_input = Input(shape=(3, self.img_width, self.img_height))
-        else:
-            true_X_input = Input(shape=(self.img_width, self.img_height, 3))
-
-        # Append the initial input to the FastNet input to the VGG inputs
-        x = merge([x_in, true_X_input], mode='concat', concat_axis=0)
-
-        # Normalize the inputs via custom VGG Normalization layer
-        x = VGGNormalize(name="vgg_normalize")(x)
-
-        # Begin adding the VGG layers
-        x = Convolution2D(64, 3, 3, activation='relu', name='conv1_1')(x)
-        x = Convolution2D(64, 3, 3, activation='relu', name='conv1_2', border_mode='same')(x)
-        x = pooling_func(x, pool_type)
-
-        x = Convolution2D(128, 3, 3, activation='relu', name='conv2_1', border_mode='same')(x)
-        x = Convolution2D(128, 3, 3, activation='relu', name='conv2_2', border_mode='same')(x)
-        x = pooling_func(x, pool_type)
-
-        x = Convolution2D(256, 3, 3, activation='relu', name='conv3_1', border_mode='same')(x)
-        x = Convolution2D(256, 3, 3, activation='relu', name='conv3_2', border_mode='same')(x)
-        x = Convolution2D(256, 3, 3, activation='relu', name='conv3_3', border_mode='same')(x)
-        x = pooling_func(x, pool_type)
-
-        x = Convolution2D(512, 3, 3, activation='relu', name='conv4_1', border_mode='same')(x)
-        x = Convolution2D(512, 3, 3, activation='relu', name='conv4_2', border_mode='same')(x)
-        x = Convolution2D(512, 3, 3, activation='relu', name='conv4_3', border_mode='same')(x)
-        x = pooling_func(x, pool_type)
-
-        x = Convolution2D(512, 3, 3, activation='relu', name='conv5_1', border_mode='same')(x)
-        x = Convolution2D(512, 3, 3, activation='relu', name='conv5_2', border_mode='same')(x)
-        x = Convolution2D(512, 3, 3, activation='relu', name='conv5_3', border_mode='same')(x)
-        x = pooling_func(x, pool_type)
-
-        model = Model([model_input, true_X_input], x)
-
-        # Loading VGG 16 weights
-        if K.image_dim_ordering() == "th":
-            weights_name = "vgg16_weights_th_dim_ordering_th_kernels_notop.h5"
-            weights_path = THEANO_WEIGHTS_PATH_NO_TOP
-        else:
-            weights_name = "vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5"
-            weights_path = TENSORFLOW_WEIGHTS_PATH_NO_TOP
-
-        weights = get_file(weights_name, weights_path, cache_subdir='models')
-        f = h5py.File(weights)
-
-        layer_names = [name for name in f.attrs['layer_names']]
-
-        for i, layer in enumerate(model.layers[-18:]):
-            g = f[layer_names[i]]
-            weights = [g[name] for name in g.attrs['weight_names']]
-            layer.set_weights(weights)
-        print('VGG Model weights loaded.')
-
-        # Freeze all VGG layers
-        for layer in model.layers[-19:]:
-            layer.trainable = False
-
-        self.model = model
-        return model
-
-
 class FastStyleNet:
     ''' Fast Style Network
     From the paper Perceptual losses for Real Time Style Transfer (http://arxiv.org/abs/1603.08155)
@@ -182,7 +89,7 @@ class FastStyleNet:
         self.vgg_content_func = None
         self.fastnet_predict_func = None
 
-        self.model = None  # Preserves the main training instance
+        self.model = None  # type: Model
         self.model_save_path = save_fastnet_model
 
     def create_model(self, style_name=None, train_mode=False, style_image_path=None, validation_path=None):
@@ -452,6 +359,100 @@ class FastStyleNet:
         os.remove(full_weights_fn)  # The full weights aren't needed anymore since we only need 1 forward pass
                                     # through the fastnet now.
         print("Saved fastnet weights for style : %s.h5" % style_name)
+
+
+class VGG:
+    '''
+    Helper class to load VGG and its weights to the FastNet model
+    '''
+
+    def __init__(self, img_height=256, img_width=256):
+        self.img_height = img_height
+        self.img_width = img_width
+
+    def append_vgg_model(self, model_input, x_in, pool_type=0):
+        '''
+        Adds the VGG model to the FastNet model. It concatenates the original input to the output generated
+        by the FastNet model. This is used to compute output features of VGG for the input image.
+
+        Then it rescales the FastNet outputs and initial input to range [-127.5, 127.5] with lambda layer
+        Ideally, I would like to subtract the channel means individually, but that is not efficient.
+        Therefore, the closest approximate is to scale the values in the range [-127.5, 127.5]
+
+        After this it adds the VGG layers.
+
+        Args:
+            model_input: Input to the FastNet model
+            x_in: Output of last layer of FastNet model
+            pool_type: int, 1 = AveragePooling, otherwise uses MaxPooling
+
+        Returns: Model (FastNet + VGG)
+
+        '''
+
+        if K.image_dim_ordering() == "th":
+            true_X_input = Input(shape=(3, self.img_width, self.img_height))
+        else:
+            true_X_input = Input(shape=(self.img_width, self.img_height, 3))
+
+        # Append the initial input to the FastNet input to the VGG inputs
+        x = merge([x_in, true_X_input], mode='concat', concat_axis=0)
+
+        # Normalize the inputs via custom VGG Normalization layer
+        x = VGGNormalize(name="vgg_normalize")(x)
+
+        # Begin adding the VGG layers
+        x = Convolution2D(64, 3, 3, activation='relu', name='conv1_1')(x)
+        x = Convolution2D(64, 3, 3, activation='relu', name='conv1_2', border_mode='same')(x)
+        x = pooling_func(x, pool_type)
+
+        x = Convolution2D(128, 3, 3, activation='relu', name='conv2_1', border_mode='same')(x)
+        x = Convolution2D(128, 3, 3, activation='relu', name='conv2_2', border_mode='same')(x)
+        x = pooling_func(x, pool_type)
+
+        x = Convolution2D(256, 3, 3, activation='relu', name='conv3_1', border_mode='same')(x)
+        x = Convolution2D(256, 3, 3, activation='relu', name='conv3_2', border_mode='same')(x)
+        x = Convolution2D(256, 3, 3, activation='relu', name='conv3_3', border_mode='same')(x)
+        x = pooling_func(x, pool_type)
+
+        x = Convolution2D(512, 3, 3, activation='relu', name='conv4_1', border_mode='same')(x)
+        x = Convolution2D(512, 3, 3, activation='relu', name='conv4_2', border_mode='same')(x)
+        x = Convolution2D(512, 3, 3, activation='relu', name='conv4_3', border_mode='same')(x)
+        x = pooling_func(x, pool_type)
+
+        x = Convolution2D(512, 3, 3, activation='relu', name='conv5_1', border_mode='same')(x)
+        x = Convolution2D(512, 3, 3, activation='relu', name='conv5_2', border_mode='same')(x)
+        x = Convolution2D(512, 3, 3, activation='relu', name='conv5_3', border_mode='same')(x)
+        x = pooling_func(x, pool_type)
+
+        model = Model([model_input, true_X_input], x)
+
+        # Loading VGG 16 weights
+        if K.image_dim_ordering() == "th":
+            weights_name = "vgg16_weights_th_dim_ordering_th_kernels_notop.h5"
+            weights_path = THEANO_WEIGHTS_PATH_NO_TOP
+        else:
+            weights_name = "vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5"
+            weights_path = TENSORFLOW_WEIGHTS_PATH_NO_TOP
+
+        weights = get_file(weights_name, weights_path, cache_subdir='models')
+        f = h5py.File(weights)
+
+        layer_names = [name for name in f.attrs['layer_names']]
+
+        for i, layer in enumerate(model.layers[-18:]):
+            g = f[layer_names[i]]
+            weights = [g[name] for name in g.attrs['weight_names']]
+            layer.set_weights(weights)
+        print('VGG Model weights loaded.')
+
+        # Freeze all VGG layers
+        for layer in model.layers[-19:]:
+            layer.trainable = False
+
+        self.model = model
+        return model
+
 
 
 if __name__ == "__main__":

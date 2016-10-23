@@ -33,8 +33,9 @@ with open(model_path, "r") as f:
     string = f.read()
     model = load_model(
         model_path,
-        dict(Denormalize=layers.Denormalize, VGGNormalize=layers.VGGNormalize))
-    model.compile("adadelta", dummy_loss)
+        dict(Denormalize=layers.Denormalize, VGGNormalize=layers.VGGNormalize,
+             ReflectionPadding2D=layers.ReflectionPadding2D))
+    model.compile("adam", dummy_loss)
 
     model.load_weights(weights_path)
 
