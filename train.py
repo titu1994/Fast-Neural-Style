@@ -135,7 +135,6 @@ for i in range(nb_epoch):
 
                 width, height = x.shape[2], x.shape[3]
 
-
                 iter_path = style_name + "_epoch_%d_at_iteration_%d" % (i + 1, iteration)
                 FastNet.save_fastnet_weights(iter_path, directory="val_weights/")
 
@@ -149,14 +148,17 @@ for i in range(nb_epoch):
                 else:
                     validation_fastnet.model.load_weights(path)
 
-                y_hat = validation_fastnet.fastnet_predict(x)
+                y_pred = validation_fastnet.fastnet_predict(x)
 
-                y_hat = y_hat[0, :, :, :]
-                y_hat = y_hat.transpose((1, 2, 0))
-                y_hat = np.clip(y_hat, 0, 255).astype('uint8')
+                y_pred = y_pred[0, :, :, :]
+                y_pred = y_pred.transpose((1, 2, 0))
+
+                print("Mean per channel : ", np.mean(y_pred, axis=(0, 1)))
+
+                y_pred = np.clip(y_pred, 0, 255).astype('uint8')
 
                 path = "val_epoch_%d_at_iteration_%d.png" % (i + 1, iteration)
-                img_utils.save_result(y_hat, path, directory="val_imgs/")
+                img_utils.save_result(y_pred, path, directory="val_imgs/")
 
                 path = "val_imgs/" + path
                 print("Validation image saved at : %s" % path)

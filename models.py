@@ -38,7 +38,7 @@ class FastStyleNet:
     '''
 
     def __init__(self, img_width=256, img_height=256, kernel_size=3, pool_type=0,
-                 style_weight=10., content_weight=1., tv_weight=8.5e-5, model_width="thin",
+                 style_weight=5., content_weight=1., tv_weight=8.5e-5, model_width="thin",
                  model_depth="shallow", save_fastnet_model=None):
         '''
         Creates a FastStyleNet object which can be used to train, validate or predict networks
@@ -125,8 +125,6 @@ class FastStyleNet:
         else:
             ip = Input(shape=(self.img_width, self.img_height, 3), name="X_input")
 
-        #x = ReflectionPadding2D((41, 41))(ip)
-
         c1 = Convolution2D(32, 9, 9, activation='relu', border_mode='same', name='conv1')(ip)
         c1_b = BatchNormalization(axis=1, mode=self.mode, name="batchnorm1")(c1)
 
@@ -168,7 +166,7 @@ class FastStyleNet:
 
         d2 = BatchNormalization(axis=1, mode=self.mode, name="batchnorm5")(d2)
 
-        d1 = Convolution2D(3, 9, 9, activation='tanh', border_mode='same', name='valid')(d2)
+        d1 = Convolution2D(3, 9, 9, activation='tanh', border_mode='same', name='fastnet_conv')(d2)
 
         # Scale output to range [0, 255] via custom Denormalize layer
         d1 = Denormalize(name='fastnet_output')(d1)
@@ -223,18 +221,18 @@ class FastStyleNet:
                     layer = vgg_layers[layer_name]
                     style_regularizer = StyleReconstructionRegularizer(
                         style_feature_target=style_features[i][0],
-                        weight=self.style_weight / len(self.style_layers))
+                        weight=self.style_weight)
                     style_regularizer.set_layer(layer)
                     layer.regularizers.append(style_regularizer)
 
             # Feature Reconstruction Loss
-            self.content_layer = 'conv3_3'
+            self.content_layer = 'conv4_2'
             self.content_layer_output = self.vgg_output_dict[self.content_layer]
 
             if self.content_weight != 0.0:
                 layer = vgg_layers[self.content_layer]
                 content_regularizer = FeatureReconstructionRegularizer(
-                    weight=self.content_weight / len(self.content_layer))
+                    weight=self.content_weight)
                 content_regularizer.set_layer(layer)
                 layer.regularizers.append(content_regularizer)
 
