@@ -125,22 +125,28 @@ class FastStyleNet:
         else:
             ip = Input(shape=(self.img_width, self.img_height, 3), name="X_input")
 
-        c1 = Convolution2D(32, 9, 9, activation='relu', border_mode='same', name='conv1')(ip)
-        c1_b = BatchNormalization(axis=1, mode=self.mode, name="batchnorm1")(c1)
+        c1 = ReflectionPadding2D((4, 4))(ip)
 
-        c2 = Convolution2D(self.features, self.k, self.k, activation='relu', border_mode='same', subsample=(2, 2),
+        c1 = Convolution2D(32, 9, 9, activation='linear', border_mode='valid', name='conv1')(c1)
+        c1_b = BatchNormalization(axis=1, mode=self.mode, name="batchnorm1")(c1)
+        c1_b = Activation('relu')(c1_b)
+
+        c2 = Convolution2D(self.features, self.k, self.k, activation='linear', border_mode='same', subsample=(2, 2),
                            name='conv2')(c1_b)
         c2_b = BatchNormalization(axis=1, mode=self.mode, name="batchnorm2")(c2)
+        c2_b = Activation('relu')(c2_b)
 
-        c3 = Convolution2D(self.features, self.k, self.k, activation='relu', border_mode='same', subsample=(2, 2),
+        c3 = Convolution2D(self.features, self.k, self.k, activation='linear', border_mode='same', subsample=(2, 2),
                            name='conv3')(c2_b)
         x = BatchNormalization(axis=1, mode=self.mode, name="batchnorm3")(c3)
+        x = Activation('relu')(x)
 
         if self.deep_model:
-            c4 = Convolution2D(self.features, self.k, self.k, activation='relu', border_mode='same', subsample=(2, 2),
+            c4 = Convolution2D(self.features, self.k, self.k, activation='linear', border_mode='same', subsample=(2, 2),
                                name='conv4')(x)
 
             x = BatchNormalization(axis=1, mode=self.mode, name="batchnorm_4")(c4)
+            x = Activation('relu')(x)
 
         r1 = self._residual_block(x, 1)
         r2 = self._residual_block(r1, 2)
@@ -149,24 +155,28 @@ class FastStyleNet:
         x = self._residual_block(r4, 5)
 
         if self.deep_model:
-            d4 = Deconvolution2D(self.features, self.k, self.k, activation="relu", border_mode="same", subsample=(2, 2),
+            d4 = Deconvolution2D(self.features, self.k, self.k, activation="linear", border_mode="same", subsample=(2, 2),
                                  output_shape=(1, self.features, self.img_width // 4, self.img_height // 4),
                                  name="deconv4")(x)
 
             x = BatchNormalization(axis=1, mode=self.mode, name="batchnorm_extra4")(d4)
+            x = Activation('relu')(x)
 
-        d3 = Deconvolution2D(self.features, self.k, self.k, activation="relu", border_mode="same", subsample=(2, 2),
+        d3 = Deconvolution2D(self.features, self.k, self.k, activation="linear", border_mode="same", subsample=(2, 2),
                              output_shape=(1, self.features, self.img_width // 2, self.img_height // 2),
                              name="deconv3")(x)
 
         d3 = BatchNormalization(axis=1, mode=self.mode, name="batchnorm4")(d3)
+        d3 = Activation('relu')(d3)
 
-        d2 = Deconvolution2D(self.features, self.k, self.k, activation="relu", border_mode="same", subsample=(2, 2),
+        d2 = Deconvolution2D(self.features, self.k, self.k, activation="linear", border_mode="same", subsample=(2, 2),
                              output_shape=(1, self.features, self.img_width, self.img_height), name="deconv2")(d3)
 
         d2 = BatchNormalization(axis=1, mode=self.mode, name="batchnorm5")(d2)
+        d2 = Activation('relu')(d2)
 
-        d1 = Convolution2D(3, 9, 9, activation='tanh', border_mode='same', name='fastnet_conv')(d2)
+        d1 = ReflectionPadding2D((4, 4))(d2)
+        d1 = Convolution2D(3, 9, 9, activation='tanh', border_mode='valid', name='fastnet_conv')(d1)
 
         # Scale output to range [0, 255] via custom Denormalize layer
         d1 = Denormalize(name='fastnet_output')(d1)
@@ -262,7 +272,7 @@ class FastStyleNet:
         x = BatchNormalization(axis=1, mode=self.mode, name="res_batchnorm_" + str(id) + "_2")(x)
 
         m = merge([x, init], mode='sum', name="res_merge_" + str(id))
-        m = Activation('relu', name="res_activation_" + str(id))(m)
+        #m = Activation('relu', name="res_activation_" + str(id))(m)
 
         return m
 

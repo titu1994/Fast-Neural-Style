@@ -94,9 +94,6 @@ class ReflectionPadding2D(Layer):
             dim_ordering = K.image_dim_ordering()
         self.padding = tuple(padding)
 
-        if (self.padding[0] % 2) == 0 or (self.padding[1] % 2) == 0:
-            raise ValueError('Padding size must be an odd number')
-
         assert dim_ordering in {'tf', 'th'}, 'dim_ordering must be in {tf, th}'
         self.dim_ordering = dim_ordering
 
@@ -127,7 +124,7 @@ class ReflectionPadding2D(Layer):
             b, r, c, k = input_shape
 
         if k % 2 == 0:
-            raise ValueError("Number of filters must be an odd number")
+            raise ValueError("Number of filters must be an odd number for now.")
 
         w_pad = self.padding[0]
         h_pad = self.padding[1]
