@@ -38,7 +38,7 @@ class FastStyleNet:
     '''
 
     def __init__(self, img_width=256, img_height=256, kernel_size=3, pool_type=0,
-                 style_weight=5., content_weight=1., tv_weight=8.5e-5, model_width="thin",
+                 style_weight=5., content_weight=1., tv_weight=1e3, model_width="thin",
                  model_depth="shallow", save_fastnet_model=None):
         '''
         Creates a FastStyleNet object which can be used to train, validate or predict networks

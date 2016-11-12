@@ -48,9 +48,9 @@ class VGGNormalize(Layer):
         if K.backend() == "theano":
             import theano.tensor as T
             #x = T.set_subtensor(x[:, :, :, :], x[:, ::-1, :, :]) # RGB -> BGR
-            x = T.set_subtensor(x[:, 2, :, :], x[:, 2, :, :] - 103.939)
+            x = T.set_subtensor(x[:, 0, :, :], x[:, 0, :, :] - 103.939)
             x = T.set_subtensor(x[:, 1, :, :], x[:, 1, :, :] - 116.779)
-            x = T.set_subtensor(x[:, 0, :, :], x[:, 0, :, :] - 123.680)
+            x = T.set_subtensor(x[:, 2, :, :], x[:, 2, :, :] - 123.680)
             #x -= 120
         else:
             # No exact substitute for set_subtensor in tensorflow

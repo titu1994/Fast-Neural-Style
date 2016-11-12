@@ -88,7 +88,7 @@ FastNet = models.FastStyleNet(img_width=img_width, img_height=img_height, kernel
 
 model = FastNet.create_model(style_name=None, train_mode=True, style_image_path=style_reference_image_path)
 
-optimizer = Adam()
+optimizer = Adam(beta_1=0.99)
 model.compile(optimizer, dummy_loss)  # Dummy loss is used since we are learning from regularizes
 print('Finished compiling fastnet model.')
 
