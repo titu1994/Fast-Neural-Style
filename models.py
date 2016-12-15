@@ -229,11 +229,11 @@ class FastStyleNet:
             if self.style_weight != 0.0:
                 for i, layer_name in enumerate(self.style_layers):
                     layer = vgg_layers[layer_name]
-                    style_regularizer = StyleReconstructionRegularizer(
+                    style_loss = StyleReconstructionRegularizer(
                         style_feature_target=style_features[i][0],
-                        weight=self.style_weight)
-                    style_regularizer.set_layer(layer)
-                    layer.regularizers.append(style_regularizer)
+                        weight=self.style_weight)(layer)
+
+                    layer.add_loss(style_loss)
 
             # Feature Reconstruction Loss
             self.content_layer = 'conv4_2'
@@ -242,16 +242,15 @@ class FastStyleNet:
             if self.content_weight != 0.0:
                 layer = vgg_layers[self.content_layer]
                 content_regularizer = FeatureReconstructionRegularizer(
-                    weight=self.content_weight)
-                content_regularizer.set_layer(layer)
-                layer.regularizers.append(content_regularizer)
+                    weight=self.content_weight)(layer)
+                layer.add_loss(content_regularizer)
 
         # Total Variation Regularization
         if self.tv_weight != 0.0:
             layer = fastnet_output_layer  # Fastnet Output layer
-            tv_regularizer = TVRegularizer(img_width=self.img_width, img_height=self.img_height, weight=self.tv_weight)
-            tv_regularizer.set_layer(layer)
-            layer.regularizers.append(tv_regularizer)
+            tv_regularizer = TVRegularizer(img_width=self.img_width, img_height=self.img_height,
+                                           weight=self.tv_weight)(layer)
+            layer.add_loss(tv_regularizer)
 
         if self.model is None:
             self.model = model

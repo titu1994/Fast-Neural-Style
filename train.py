@@ -8,6 +8,7 @@ import numpy as np
 import argparse
 import time
 import img_utils
+import warnings
 
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
@@ -44,6 +45,9 @@ style_reference_image_path = args.style_reference_image_path
 style_name = os.path.splitext(os.path.basename(style_reference_image_path))[0]
 
 validation_img_path = args.validation_img
+
+warnings.warn("Due to recent changes in how regularizers are handled in Keras, the code has been updated to support the new method.\n"
+              "Please update your keras to the master branch to train properly.")
 
 ''' Attributes '''
 # Dimensions of the input image
